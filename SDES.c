@@ -9,7 +9,7 @@ short s0[16] = { 1,0,3,2,3,2,1,0,0,2,1,3,3,1,3,2 };
 short s1[16] = { 0,1,2,3,2,0,1,3,3,0,1,0,2,1,0,3 };
 short key = -1, k1, k2, P, C;
 
-short tablePermute(short bits4, short table[]);
+short sBoxPermute(short bits4, short table[]);
 short permute(short num, short numSize, short function[], short returnSize);
 short leftShift(short* num, short ammount);
 short getBitAt(short num, short position);
@@ -68,7 +68,8 @@ int main() {
     return 0;
 }
 
-short tablePermute(short bits4, short table[])
+// Uses the 4 bit input to return a 2 bit output
+short sBoxPermute(short bits4, short table[])
 {
     short row, col;
     row = getBitAt(bits4, 3) * 2;
@@ -79,26 +80,49 @@ short tablePermute(short bits4, short table[])
     return table[row + col];
 }
 
+// Uses the function[] to permute the num
 short permute(short num, short numSize, short function[], short returnSize)
 {
     short result = 0;
     for (short i = 0; i < returnSize; i++)
-        result += getBitAt(num, numSize - function[i]) << (returnSize - 1 - i);
+    {
+            // Get the bit at the ith positon of the function
+            // Subtract from numSize as the permutation is left to right
+            int bitAtPosition = getBitAt(num, numSize - function[i]);
+
+            // Shift so that the numbers start from the left
+            int shiftAmmount = (returnSize - 1 - i);
+            
+            // Add the bits to create the value from left to right
+            result += bitAtPosition << shiftAmmount;
+    }
+
     return result;
 }
 
+// Perform a left shift on num
 short leftShift(short* num, short ammount)
 {
-    for (short i = 0; i < ammount; i++)
-        *num = (*num << 1) ^ getBitAt(*num, 4);
+        for (short i = 0; i < ammount; i++)
+        {
+                // Shift the num to the left by 1 and 
+                // xor the 5th bit to peform a rotational shift
+                int rotationalBit = getBitAt(*num, 4);
+                *num = (*num << 1) ^ rotationalBit;
+        }
+
+    // Trim off any extra bits after the 5th bit
     *num = getBits(*num, 5, 0);
 }
 
+// Returns the bit at the position from num
+// Bit 0 starts from the right
 short getBitAt(short num, short position)
 {
     return (num >> position) & 1;
 }
 
+// Print out the bits in their character form
 void printBits(short num, short size)
 {
     for (short i = size - 1; i >= 0; i--)
@@ -109,11 +133,13 @@ void printBits(short num, short size)
     printf("\n");
 }
 
+// Returns only the bits from 0 - size from num
 short getBits(short num, short size, short startPos)
 {
     return ((1 << size) - 1) & (num >> (startPos));
 }
 
+// Combines 2 sets of bits into one
 short combine(short left, short right, short size)
 {
     left = getBits(left, size, 0);
@@ -173,8 +199,8 @@ void fk(short aIn, short bIn, short* aOut, short* bOut, short key)
     r4 = getBits(epResult, 4, 0);
 
     // get the values from the tables
-    l4 = tablePermute(l4, s0);
-    r4 = tablePermute(r4, s1);
+    l4 = sBoxPermute(l4, s0);
+    r4 = sBoxPermute(r4, s1);
 
     // combine the values
     p4Result = combine(l4, r4, 2);
